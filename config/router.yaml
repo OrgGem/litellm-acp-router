@@ -1,0 +1,32 @@
+# Backends run in separate Python environments, with separate API keys.
+model_list:
+  - model_name: codex-default
+    litellm_params:
+      model: openai/codex-default
+      api_base: os.environ/CODEX_API_BASE
+      api_key: os.environ/CODEX_API_KEY
+      timeout: 330
+      max_retries: 0
+  - model_name: antigravity
+    litellm_params:
+      model: openai/antigravity
+      api_base: os.environ/ANTIGRAVITY_API_BASE
+      api_key: os.environ/ANTIGRAVITY_RPC_API_KEY
+      timeout: 150
+      max_retries: 0
+
+litellm_settings:
+  drop_params: false
+  num_retries: 0
+  request_timeout: 350
+  telemetry: false
+  set_verbose: false
+
+router_settings:
+  num_retries: 0
+  timeout: 350
+  fallbacks: []
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  background_health_checks: false

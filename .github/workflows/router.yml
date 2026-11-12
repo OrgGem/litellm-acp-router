@@ -1,0 +1,21 @@
+name: Router validation
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  router:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install uv==0.12.17
+      - run: uv sync --frozen
+      - run: uv run --frozen ruff check scripts tests
+      - run: uv run --frozen ruff format --check scripts tests
+      - run: uv run --frozen pytest -q

@@ -1,0 +1,65 @@
+{
+  "ports": {
+    "router": 4000,
+    "codex": 4101,
+    "antigravity": 4102,
+    "claude": 4103,
+    "kiro": 4104
+  },
+  "keys": {
+    "router": "",
+    "codex": "",
+    "antigravity": "",
+    "claude": "",
+    "kiro": ""
+  },
+  "executables": {
+    "codex": "codex",
+    "antigravity": "agy",
+    "claude": null,
+    "kiro": "kiro-cli"
+  },
+  "codex_model": null,
+  "antigravity_models": {
+    "antigravity": {
+      "model": "gemini-4-carbon",
+      "thought_level": "medium"
+    }
+  },
+  "schema_version": 2,
+  "enabled": {
+    "codex": true,
+    "antigravity": true,
+    "claude": false,
+    "kiro": false
+  },
+  "claude_models": {
+    "claude-default": null
+  },
+  "kiro_models": {
+    "kiro-default": null
+  },
+  "router_timeout": 350,
+  "claude_limits": {
+    "concurrency": 2,
+    "max_sessions": 4,
+    "max_pending": 16,
+    "idle_ttl": 600,
+    "timeout": 300,
+    "cleanup_timeout": 10,
+    "max_input_bytes": 131072,
+    "max_output_bytes": 2097152,
+    "queue_size": 64
+  },
+  "kiro_limits": {
+    "concurrency": 2,
+    "max_sessions": 4,
+    "max_pending": 16,
+    "idle_ttl": 600,
+    "timeout": 300,
+    "cleanup_timeout": 10,
+    "max_input_bytes": 131072,
+    "max_output_bytes": 2097152,
+    "queue_size": 64
+  }
+}
