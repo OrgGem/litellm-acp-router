@@ -1,0 +1,23 @@
+{
+  "enabled": {
+    "codex": true,
+    "antigravity": false,
+    "claude": false,
+    "kiro": false
+  },
+  "keys": {"router": ""},
+  "ports": {"router": 4000},
+  "executables": {
+    "codex": "codex",
+    "antigravity": "agy",
+    "claude": null,
+    "kiro": "kiro-cli"
+  },
+  "codex_model": null,
+  "antigravity_models": {
+    "antigravity": {"model": "gemini-4-carbon", "thought_level": "medium"}
+  },
+  "claude_models": {"claude-default": null},
+  "kiro_models": {"kiro-default": null},
+  "router_timeout": 350
+}

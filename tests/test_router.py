@@ -140,7 +140,12 @@ def stack(tmp_path_factory):
             config["ports"]["router"] = sock.getsockname()[1]
         with (temp / "router.log").open("wb") as log:
             child = subprocess.Popen(
-                workspace.command(config, "router"),
+                [
+                    str(workspace.python_for("router")),
+                    str(workspace.ROOT / "scripts/serve_router.py"),
+                    "--port",
+                    str(config["ports"]["router"]),
+                ],
                 cwd=workspace.ROOT,
                 env=workspace.environment(config, "router"),
                 stdout=log,

@@ -1,0 +1,25 @@
+name: litellm-agent-rpc-example
+services:
+  litellm:
+    image: litellm-agent-rpc-example:local
+    build:
+      context: ../..
+      dockerfile: example/docker/Dockerfile
+      args:
+        CODEX_VERSION: "0.167.0"
+        PLUGIN_WHEEL: litellm_agent_rpc-0.2.0.dev0-py3-none-any.whl
+        PLUGIN_EXTRAS: ""
+    init: true
+    ports:
+      - "127.0.0.1:4000:4000"
+    volumes:
+      - type: bind
+        source: ./config.json
+        target: /app/config.json
+        read_only: true
+        bind:
+          create_host_path: false
+      - codex-home:/home/agent/.codex
+    stop_grace_period: 30s
+volumes:
+  codex-home:

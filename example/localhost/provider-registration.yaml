@@ -1,0 +1,30 @@
+# Reference only: agent-rpc serve generates this structure from enabled JSON routes.
+# Do not enable all four by copying this file over your runtime configuration.
+model_list:
+  - model_name: codex-default
+    litellm_params:
+      model: agent_rpc/codex-default
+      max_retries: 0
+  - model_name: antigravity
+    litellm_params:
+      model: agent_rpc/antigravity
+      max_retries: 0
+  - model_name: claude-default
+    litellm_params:
+      model: agent_rpc/claude-default
+      max_retries: 0
+  - model_name: kiro-default
+    litellm_params:
+      model: agent_rpc/kiro-default
+      max_retries: 0
+litellm_settings:
+  custom_provider_map:
+    - provider: agent_rpc
+      custom_handler: litellm_agent_rpc.provider.plugin
+  drop_params: false
+  num_retries: 0
+router_settings:
+  num_retries: 0
+  fallbacks: []
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

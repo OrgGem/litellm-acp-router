@@ -15,6 +15,10 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(ROOT / "src"))
+from litellm_agent_rpc.config import route_specs, routes  # noqa: E402
+
 LOCAL = ROOT / ".local" / "config.json"
 PROJECTS = {
     "router": ROOT,
@@ -144,12 +148,17 @@ def validate_config(config):
         )
     if len(set(keys.values())) != len(keys):
         raise ValueError("Do not reuse keys between services")
-    if set(config["antigravity_models"]) != {"antigravity"}:
+    if "routes" not in config and set(config["antigravity_models"]) != {"antigravity"}:
         raise ValueError("The router profile requires the 'antigravity' alias")
+    route_specs(config)
     for service in ("claude", "kiro"):
         models = config[service + "_models"]
-        if set(models) != {ALIASES[service]} or any(
-            v is not None and (not isinstance(v, str) or not v) for v in models.values()
+        if "routes" not in config and (
+            set(models) != {ALIASES[service]}
+            or any(
+                v is not None and (not isinstance(v, str) or not v)
+                for v in models.values()
+            )
         ):
             raise ValueError("Invalid agent model mapping")
         limits = config.get(service + "_limits", {})
@@ -181,6 +190,7 @@ def validate_config(config):
 
 
 def environment(config, service):
+    """Legacy standalone-host environment, retained for regression fixtures."""
     env = os.environ.copy()
     # Do not send local API requests through a user's outbound HTTP proxy.
     bypass = env.get("NO_PROXY", env.get("no_proxy", ""))
@@ -228,13 +238,31 @@ def environment(config, service):
     return env
 
 
+def unified_environment(config):
+    env = os.environ.copy()
+    bypass = env.get("NO_PROXY", env.get("no_proxy", ""))
+    env["NO_PROXY"] = env["no_proxy"] = bypass + ",127.0.0.1,localhost"
+    env.update(
+        PYTHONUTF8="1",
+        LITELLM_TELEMETRY="False",
+        LITELLM_LOCAL_MODEL_COST_MAP="True",
+        LITELLM_MODE="PRODUCTION",
+        LITELLM_MASTER_KEY=config["keys"]["router"],
+    )
+    return env
+
+
 def command(config, service):
     python = str(python_for(service))
     port = str(config["ports"][service])
     if service == "router":
         return [
             python,
-            str(ROOT / "scripts/serve_router.py"),
+            "-m",
+            "litellm_agent_rpc",
+            "serve",
+            "--config",
+            str(LOCAL),
             "--port",
             port,
         ]
@@ -280,18 +308,15 @@ def setup(dev=False):
         raise ValueError("Install uv first")
     initialize()
     config = read_config(LOCAL)
-    for service in enabled_services(config):
-        directory = PROJECTS[service]
-        if not (directory / "pyproject.toml").exists():
-            raise ValueError(f"Missing {directory.name}; see README repository setup")
-        args = [uv, "sync", "--frozen", "--project", str(directory)]
-        if service == "codex":
-            args += ["--extra", "proxy"]
-        if dev and service != "router":
-            args += ["--extra", "dev"]
-        if service == "router" and not dev:
-            args += ["--no-dev"]
-        subprocess.run(args, cwd=directory, check=True)
+    for service in ALIASES:
+        if not (PROJECTS[service] / "src").is_dir():
+            raise ValueError(f"Missing adapter source: {PROJECTS[service].name}")
+    args = [uv, "sync", "--frozen", "--project", str(ROOT)]
+    if config["enabled"].get("claude"):
+        args += ["--extra", "claude"]
+    if not dev:
+        args += ["--no-dev"]
+    subprocess.run(args, cwd=ROOT, check=True)
 
 
 def get_models(config, service):
@@ -307,28 +332,18 @@ def get_models(config, service):
 
 
 def check(config):
-    failed = False
-    for service in enabled_services(config):
-        installed = python_for(service).is_file()
-        print(f"{service}: environment {'OK' if installed else 'MISSING'}")
-        failed |= not installed
-        if service not in ("router", "claude"):
-            found = bool(shutil.which(config["executables"][service]))
-            print(f"{service}: CLI {'found' if found else 'MISSING'}")
-            failed |= not found
-        try:
-            aliases = get_models(config, service)
-            expected = (
-                {ALIASES[s] for s in enabled_services(config) if s != "router"}
-                if service == "router"
-                else {ALIASES[service]}
-            )
-            if not expected <= aliases:
-                raise ValueError("Missing expected model aliases")
-            print(f"{service}: authenticated model list OK")
-        except (OSError, ValueError, KeyError):
-            print(f"{service}: endpoint unavailable or model/key mismatch")
-            failed = True
+    installed = python_for("router").is_file()
+    print(f"router: environment {'OK' if installed else 'MISSING'}")
+    failed = not installed
+    try:
+        aliases = get_models(config, "router")
+        expected = set(routes(config))
+        if expected != aliases:
+            raise ValueError("Unexpected model aliases")
+        print("router: authenticated model list OK")
+    except (OSError, ValueError, KeyError):
+        print("router: endpoint unavailable or model/key mismatch")
+        failed = True
     print("No prompt sent. Model entitlement and quota are not verified.")
     return int(failed)
 
@@ -336,18 +351,16 @@ def check(config):
 def serve(config, service):
     if service not in enabled_services(config):
         raise ValueError("Backend disabled; enable explicitly in local config")
+    if service != "router":
+        raise ValueError("Use serve router: one LiteLLM process owns all backends")
     if not python_for(service).is_file():
         raise ValueError("Environment missing; run setup first")
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", config["ports"][service]))
-    if service == "antigravity":
-        (LOCAL.parent / "antigravity.models.json").write_text(
-            json.dumps(config["antigravity_models"], indent=2), encoding="utf-8"
-        )
     print(f"Starting {service} on 127.0.0.1:{config['ports'][service]}", flush=True)
     # Foreground child shares the console, so Ctrl+C reaches the API host too.
     child = subprocess.Popen(
-        command(config, service), cwd=ROOT, env=environment(config, service)
+        command(config, service), cwd=ROOT, env=unified_environment(config)
     )
     try:
         return child.wait()
@@ -364,10 +377,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="action", required=True)
     commands.add_parser(
-        "init", help="Create local config and three independent API keys"
+        "init", help="Create local config and gateway key (preserving legacy fields)"
     )
     setup_parser = commands.add_parser(
-        "setup", help="Install isolated locked environments"
+        "setup", help="Install one locked environment with all adapter sources"
     )
     setup_parser.add_argument("--dev", action="store_true")
     commands.add_parser("check", help="Check local services without calling any model")

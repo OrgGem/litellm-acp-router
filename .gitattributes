@@ -1,0 +1,2 @@
+contracts/agent-rpc/** text eol=lf
+src/litellm_agent_rpc/v2/schema.json text eol=lf

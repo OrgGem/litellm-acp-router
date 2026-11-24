@@ -1,4 +1,4 @@
-# Backends run in separate Python environments, with separate API keys.
+# Legacy HTTP-host topology, retained only for regression tests.
 model_list:
   - model_name: codex-default
     litellm_params:

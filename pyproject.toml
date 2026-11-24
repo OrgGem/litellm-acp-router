@@ -1,18 +1,42 @@
+[build-system]
+requires = ["hatchling>=1.26,<2"]
+build-backend = "hatchling.build"
+
 [project]
-name = "litellm-acp-router"
-version = "0.1.0"
-description = "Deployment workspace for isolated LiteLLM agent CLI backends"
+name = "litellm-agent-rpc"
+version = "0.2.0.dev0"
+description = "One LiteLLM provider for Codex, Antigravity, Claude and Kiro CLI backends"
 requires-python = ">=3.11,<3.14"
-dependencies = ["litellm[proxy]==1.109.0"]
+dependencies = ["litellm[proxy]==1.109.0", "websockets==15.0.1", "jsonschema==4.26.0"]
+
+[project.optional-dependencies]
+claude = ["claude-agent-sdk==0.2.180"]
+tui = ["textual==6.2.1"]
+
+[project.scripts]
+agent-rpc = "litellm_agent_rpc.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8,<10", "ruff>=0.14,<1"]
+dev = ["pytest>=8,<10", "pytest-asyncio>=1,<2", "ruff>=0.14,<1"]
 
-[tool.uv]
-package = false
+[tool.hatch.build]
+exclude = ["**/__pycache__", "**/*.pyc"]
+
+[tool.hatch.build.targets.wheel]
+ignore-vcs = true
+packages = ["src/litellm_agent_rpc", "litellm-codex-rpc/src/litellm_codex_rpc", "litellm-codex-rpc/src/serve_codex_rpc", "litellm-antigravity-rpc/src/litellm_antigravity_rpc", "litellm-claude-rpc/src/litellm_claude_rpc", "litellm-kiro-rpc/src/litellm_kiro_rpc"]
+
+[tool.hatch.build.targets.sdist]
+ignore-vcs = true
+only-include = ["src", "pyproject.toml", "README.md", "THIRD_PARTY_NOTICES.md", "litellm-codex-rpc/src", "litellm-codex-rpc/LICENSE", "litellm-antigravity-rpc/src", "litellm-claude-rpc/src", "litellm-kiro-rpc/src"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"litellm-codex-rpc/LICENSE" = "litellm_agent_rpc/licenses/codex-MIT.txt"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.ruff]
 target-version = "py311"

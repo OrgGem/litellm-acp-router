@@ -1,0 +1,95 @@
+name: litellm-stack
+
+services:
+  postgres:
+    image: postgres:16-alpine@sha256:81e77a4833487b8132fe4b00bedd39dc3f74b8641e387f19312a48f7de218c2e
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: litellm
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run init.ps1 first}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 1g
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+
+  redis:
+    image: redis:8-alpine@sha256:7958cfbb9d152f87dadfbc89f1b0b15938f0b81ff8982feb327476f4911935c3
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Run init.ps1 first}
+    command:
+      - /bin/sh
+      - -ec
+      - exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes --appendfsync everysec --maxmemory 512mb --maxmemory-policy noeviction
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [CMD-SHELL, 'REDISCLI_AUTH="$${REDIS_PASSWORD}" redis-cli ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 768m
+    logging: *logging
+
+  litellm:
+    image: ghcr.io/berriai/litellm:v1.109.0@sha256:26aecfb02fb17ac6590f0549478561f9fbb3f69314317320b2e32a21beed4006
+    restart: unless-stopped
+    init: true
+    command: [--config, /app/config.yaml, --host, 0.0.0.0, --port, '4000', --num_workers, '1']
+    ports:
+      - '127.0.0.1:${LITELLM_PORT:-14000}:4000'
+    environment:
+      DATABASE_URL: postgresql://litellm:${POSTGRES_PASSWORD:?Run init.ps1 first}@postgres:5432/litellm?connection_limit=10&pool_timeout=30
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?Run init.ps1 first}
+      LITELLM_SALT_KEY: ${LITELLM_SALT_KEY:?Run init.ps1 first}
+      UI_USERNAME: ${UI_USERNAME:-admin}
+      UI_PASSWORD: ${UI_PASSWORD:?Run init.ps1 first}
+      AUTO_REDIRECT_UI_LOGIN_TO_SSO: 'true'
+      NO_DOCS: 'true'
+      NO_REDOC: 'true'
+      STORE_MODEL_IN_DB: 'True'
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Run init.ps1 first}
+      LITELLM_LOG: INFO
+      LITELLM_TELEMETRY: 'False'
+    env_file:
+      - .env.oidc
+    networks:
+      - default
+      - authentik
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:4000/health/readiness", timeout=5)']
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+    mem_limit: 3g
+    stop_grace_period: 60s
+    logging: *logging
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  authentik:
+    external: true
+    name: authentik-stack_default

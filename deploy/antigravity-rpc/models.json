@@ -1,0 +1,11 @@
+{
+  "antigravity": {"model": "gemini-4-carbon", "thought_level": "medium"},
+  "gemini-4-neon": {"model": "gemini-4-neon", "thought_level": "high"},
+  "gemini-4-carbon": {"model": "gemini-4-carbon", "thought_level": "high"},
+  "gemini-4-argon": {"model": "gemini-4-argon", "thought_level": "high"},
+  "gemini-4-hydrogen": {"model": "gemini-4-hydrogen", "thought_level": "high"},
+  "gemini-3.8-flash": {"model": "gemini-3.8-flash", "thought_level": "medium"},
+  "agy-claude-sonnet-4-6": {"model": "claude-sonnet-4-6", "thought_level": "medium"},
+  "agy-claude-opus-4-6": {"model": "claude-opus-4-6-thinking", "thought_level": "high"},
+  "gpt-oss-120b-medium": {"model": "gpt-oss-120b-medium", "thought_level": "medium"}
+}

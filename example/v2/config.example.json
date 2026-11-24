@@ -1,0 +1,42 @@
+{
+  "keys": {
+    "router": "REPLACE_WITH_A_PRIVATE_RANDOM_ROUTER_KEY"
+  },
+  "ports": {
+    "router": 4000
+  },
+  "enabled": {
+    "codex": true,
+    "antigravity": false,
+    "claude": false,
+    "kiro": false
+  },
+  "routes": {
+    "coding": {
+      "backend": "codex",
+      "model": null,
+      "settings": {},
+      "enabled": true
+    }
+  },
+  "v2": {
+    "enabled": false,
+    "auth_mode": "owner",
+    "routes": {
+      "coding": {
+        "profile_id": "example-profile",
+        "profile_revision": "revision-1",
+        "transport": "stdio"
+      }
+    },
+    "limits": {
+      "max_active": 2,
+      "max_sessions": 4,
+      "native_seconds": 300,
+      "chain_seconds": 600,
+      "tool_wait_seconds": 120,
+      "cleanup_seconds": 5,
+      "max_handoffs": 16
+    }
+  }
+}

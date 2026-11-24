@@ -1,4 +1,4 @@
-"""Run LiteLLM with optional routes and strict agent ingress."""
+"""Legacy HTTP-host launcher for regression tests; use agent-rpc serve instead."""
 
 import argparse
 import json
@@ -13,7 +13,7 @@ from router_policy import Ingress
 
 def router_config(backends):
     root = Path(__file__).resolve().parents[1]
-    config = yaml.safe_load((root / "config/router.yaml").read_text())
+    config = yaml.safe_load((root / "config/router.legacy.yaml").read_text())
     limits = json.loads(os.environ.get("ROUTER_AGENT_LIMITS", "{}"))
     router_timeout = float(os.environ.get("ROUTER_TIMEOUT", "350"))
     aliases = {

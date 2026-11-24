@@ -1,0 +1,4 @@
+# Only the built plugin wheel enters the build context; no source credentials.
+**
+!dist/
+!dist/*.whl
